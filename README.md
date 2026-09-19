@@ -1,0 +1,1 @@
+[![Job Tracker Automation](https://github.com/mfazilk09/Job-application-tracker-board/actions/workflows/job_tracker.yml/badge.svg)](https://github.com/mfazilk09/Job-application-tracker-board/actions/workflows/job_tracker.yml)
