@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 
 # Import the JobAction schema from your new file
-from define_data_schema import JobAction
+from define_data_schema import JobActionItem
 
 def extract_job_details(raw_html):
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -25,7 +25,7 @@ def extract_job_details(raw_html):
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=JobAction, # This now references the imported class
+            response_schema=JobActionItem, # This now references the imported class
             temperature=0.1
         ),
     )
