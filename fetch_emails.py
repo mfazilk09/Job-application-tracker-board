@@ -29,3 +29,15 @@ def get_full_email(email_id):
         raw_html = raw_html.split('<style>')[0] 
         
     return raw_html
+
+    def mark_as_read(email_id, gmail_service):
+        """Removes the UNREAD label from an email so it isn't processed again."""
+        try:
+            gmail_service.users().messages().modify(
+                userId='me',
+                id=email_id,
+                body={'removeLabelIds': ['UNREAD']}
+            ).execute()
+            print(f"Email {email_id} marked as read.")
+        except Exception as e:
+            print(f"Failed to mark email as read: {e}")

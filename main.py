@@ -4,53 +4,52 @@ from dotenv import load_dotenv
 # 1. Load variables first
 load_dotenv()
 
-# 2. Import FUNCTIONS, not variables
+# 2. Import FUNCTIONS
 from authenticate import tasks
 from LLMpayload import get_email_summaries
-from LLMclassification import get_target_email_ids
 from fetch_emails import get_full_email
 from decode_gmail_payload import extract_job_details
+from task_creation import create_job_task # <-- Import your updated function!
 
 def run_pipeline():
-    DRY_RUN = False 
+    DRY_RUN = False
 
-    # 3. Call the functions in order, passing data to the next step
-    
-    # (Note: Added parentheses to actually call the function)
+    # 3. Get recent emails
     emails = get_email_summaries() 
     
     if not emails:
         print("No recent emails found.")
         return
 
-    # Pass the emails to Gemini to find the target IDs
-    target_ids = get_target_email_ids(emails)
-    
-    for email_id in target_ids:
-        # Fetch the full HTML payload for each relevant email
+    # 4. Loop directly through the emails (bypassing the obsolete classification step)
+    for email in emails:
+        email_id = email['id'] if isinstance(email, dict) else email
+        email_subject = email.get('subject', f'ID: {email_id}') if isinstance(email, dict) else "Email"
+        
         raw_html = get_full_email(email_id)
         
-        # Extract the specific URL and deadline
+        # 1. Extract the dynamic data using Gemini
         extracted_data = extract_job_details(raw_html)
-        
-        task_body = {
-            'title': 'Complete Assessment for Acme Corp',
-            'notes': f'Assessment Link: {extracted_data.action_url}',
-            'due': extracted_data.deadline_rfc3339 
-        }
+
+        # --- ADD THIS SAFETY CHECK ---
+        if not extracted_data:
+            print(f"⚠️ Gemini failed to extract data for: {email_subject}. Skipping...")
+            continue 
+        # -----------------------------
 
         if DRY_RUN:
-            print("--- DRY RUN MODE ---")
-            print(f"Target Email Found: {email_id}")
-            print(f"  URL: {extracted_data.action_url}")
-            print(f"  Deadline: {extracted_data.deadline_rfc3339}")
+            print(f"DRY RUN: Would create '{extracted_data.task_type} - {extracted_data.company_name}'")
         else:
-            # Actually insert the task using the tasks() collection
-            tasks.tasks().insert(
-            tasklist='@default', 
-            body=task_body
-            ).execute()
-            print("Task created successfully!")
+            # 2. Use the dynamic creation function (NO hardcoded task_body here)
+            task_result = create_job_task(tasks, extracted_data, email_subject)
+            
+            # 3. Prevent duplicates: mark as read if the task was created
+            if task_result:
+                # Make sure to pass your initialized Gmail service object here
+                from authenticate import gmail
+                from fetch_emails import mark_as_read
+                
+                mark_as_read(email_id, gmail_service)
 
 if __name__ == "__main__":
     run_pipeline()
