@@ -23,28 +23,33 @@ def run_pipeline():
 
     # 4. Loop directly through the emails (bypassing the obsolete classification step)
     for email in emails:
-        # Safely extract the ID and subject depending on how your list is formatted
         email_id = email['id'] if isinstance(email, dict) else email
-        email_subject = email.get('subject', f'Email ID: {email_id}') if isinstance(email, dict) else f"Email ID: {email}"
+        email_subject = email.get('subject', f'ID: {email_id}') if isinstance(email, dict) else "Email"
         
-        # Fetch the full HTML payload
         raw_html = get_full_email(email_id)
         
-        # 5. Extract data and evaluate the gatekeeper flag in ONE call
+        # 1. Extract the dynamic data using Gemini
         extracted_data = extract_job_details(raw_html)
 
+        # --- ADD THIS SAFETY CHECK ---
+        if not extracted_data:
+            print(f"⚠️ Gemini failed to extract data for: {email_subject}. Skipping...")
+            continue 
+        # -----------------------------
+
         if DRY_RUN:
-            print("--- DRY RUN MODE ---")
-            if not extracted_data.is_actionable_task:
-                print(f"Skipped irrelevant email: {email_subject}")
-            else:
-                print(f"Actionable Task Found: {email_subject}")
-                print(f"  Dynamic Title: {extracted_data.task_type} - {extracted_data.company_name}")
-                print(f"  URL: {extracted_data.action_link}")
-                print(f"  Deadline: {extracted_data.deadline}")
+            print(f"DRY RUN: Would create '{extracted_data.task_type} - {extracted_data.company_name}'")
         else:
-            # 6. Actually create the task using your dedicated function
-            create_job_task(tasks, extracted_data, email_subject)
+            # 2. Use the dynamic creation function (NO hardcoded task_body here)
+            task_result = create_job_task(tasks, extracted_data, email_subject)
+            
+            # 3. Prevent duplicates: mark as read if the task was created
+            if task_result:
+                # Make sure to pass your initialized Gmail service object here
+                from authenticate import gmail
+                from fetch_emails import mark_as_read
+                
+                mark_as_read(email_id, gmail_service)
 
 if __name__ == "__main__":
     run_pipeline()
