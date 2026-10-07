@@ -49,7 +49,7 @@ def run_pipeline():
                 from authenticate import gmail
                 from fetch_emails import mark_as_read
                 
-                mark_as_read(email_id, gmail_service)
+                mark_as_read(email_id, gmail)
 
 if __name__ == "__main__":
     run_pipeline()
