@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 
 # 1. Load variables first
@@ -50,6 +51,9 @@ def run_pipeline():
                 from fetch_emails import mark_as_read
                 
                 mark_as_read(email_id, gmail)
+
+        print("Pausing for 5 seconds to respect Gemini API limits...")
+        time.sleep(5)
 
 if __name__ == "__main__":
     run_pipeline()
